@@ -1,34 +1,9 @@
 #[cfg(feature = "buddy-alloc")]
 mod alloc;
 mod wasm4;
+mod gamepad;
 use wasm4::*;
-
-#[rustfmt::skip]
-const SMILEY: [u8; 8] = [
-    0b11000011,
-    0b10000001,
-    0b00100100,
-    0b00100100,
-    0b00000000,
-    0b00100100,
-    0b10011001,
-    0b11000011,
-];
-
-const MAP_01: [[u8; 4]; 7] = [
-    [1,1,1,1],
-    [1,1,0,1],
-    [1,1,0,1],
-    [1,1,0,1],
-    [1,0,0,1],
-    [1,0,1,1],
-    [1,1,1,1]
-];
-
-// const MAP_01_START: Pos = {
-//     x: 2,
-//     y: 5,
-// };
+use gamepad::*;
 
 #[no_mangle]
 fn start() {
@@ -44,28 +19,31 @@ fn start() {
     }
 }
 
-struct Pos {
-    x: i32,
-    y: i32,
-}
-
-fn render_2d(player_pos: Pos) {
-
-}
-
 #[no_mangle]
-fn update() {
-    unsafe { *DRAW_COLORS = 0x42 }
-    rect(10, 10, 32, 32);
-    // unsafe { *DRAW_COLORS = 0x4320 }
-    // text("Hello from Rust!", 10, 10);
+unsafe fn update() {
+    gamepad_update();
 
-    // let gamepad = unsafe { *GAMEPAD1 };
-    // if gamepad & BUTTON_1 != 0 {
-    //     unsafe { *DRAW_COLORS = 4 }
-    // }
+    if PLAYER01_PREVIOUS_GAMEPAD & BUTTON_1 != 0 {
+        text("P01 pressing x", 0, 10)
+    } else {
+        text("P01 not pressing x", 0, 10)
+    }
 
-    // blit(&SMILEY, 76, 76, 8, 8, BLIT_1BPP);
-    // text("Press X to blink", 16, 90);
+    if PLAYER02_PREVIOUS_GAMEPAD & BUTTON_1 != 0 {
+        text("P02 pressing x", 0, 20)
+    } else {
+        text("P02 not pressing x", 0, 20)
+    }
 
+    if PLAYER03_PREVIOUS_GAMEPAD & BUTTON_1 != 0 {
+        text("P03 pressing x", 0, 30)
+    } else {
+        text("P03 not pressing x", 0, 30)
+    }
+
+    if PLAYER04_PREVIOUS_GAMEPAD & BUTTON_1 != 0 {
+        text("P04 pressing x", 0, 40)
+    } else {
+        text("P04 not pressing x", 0, 40)
+    }
 }
