@@ -2,8 +2,23 @@
 mod alloc;
 mod assets;
 mod wasm4;
+mod game;
+mod zombie;
+mod coord;
+mod color_state;
+
 use std::ops::{Add, Sub};
 use wasm4::*;
+use game::Game;
+use lazy_static::lazy_static;
+use std::sync::Mutex;
+use zombie::*;
+use coord::*;
+use color_state::*;
+
+lazy_static! {
+    static ref GAME: Mutex<Game> = Mutex::new(Game::new());
+}
 
 #[derive(Debug, Copy, Clone)]
 struct Vec3 {
@@ -39,19 +54,6 @@ impl Sub for Vec3 {
         }
     }
 }
-
-#[derive(Debug, PartialEq, Eq, Copy, Clone)]
-struct Coord(i32, i32);
-
-impl Add for Coord {
-    type Output = Self;
-
-    fn add(self, other: Self) -> Self {
-        Self(self.0 + other.0, self.1 + other.1)
-    }
-}
-
-const ZOMBIE_SPEED: f32 = 0.005;
 
 const DIRECTIONS: [Coord; 4] = [Coord(-1, 0), Coord(1, 0), Coord(0, -1), Coord(0, 1)];
 
@@ -93,18 +95,6 @@ fn world_to_screen(vec: Vec3) -> (i32, i32) {
     (x1 + x2, y1 + y2 - z)
 }
 
-struct Zombie {
-    curr_x: f32,
-    curr_y: f32,
-    last: Coord,
-}
-
-impl Zombie {
-    fn curr_coord(&self) -> Coord {
-        Coord(self.curr_x.floor() as i32, self.curr_y.floor() as i32)
-    }
-}
-
 static mut ZOMBIES: Vec<Zombie> = Vec::new();
 
 // Top right is 0,0
@@ -135,6 +125,8 @@ const MAP_03: [u32; 21] = [
 
 #[no_mangle]
 fn start() {
+    GAME.lock().expect("game_state").start();
+    
     unsafe {
         ZOMBIES.push(Zombie {
             curr_x: 9.5,
@@ -143,11 +135,9 @@ fn start() {
         });
     }
 
-    unsafe { *DRAW_COLORS = 0x4321 }
+    set_draw_colors(0x4321);
 
-    unsafe {
-        *PALETTE = [0x5a3921, 0x6b8c42, 0x7bc67b, 0xffffb5];
-    }
+    set_pallet([0x5a3921, 0x6b8c42, 0x7bc67b, 0xffffb5]);
 }
 
 fn draw_hill(x: f32, y: f32) {
@@ -175,9 +165,9 @@ fn is_hill(x: i32, y: i32) -> bool {
 
 #[no_mangle]
 fn update() {
-    unsafe { *DRAW_COLORS = 0x4321 }
+    GAME.lock().expect("game_state").update();
 
-    unsafe { *DRAW_COLORS = 0x30 }
+    set_draw_colors(0x30);
 
     let padding_tiles_x = 6;
     let padding_tiles_y = 6;
@@ -187,7 +177,8 @@ fn update() {
     let cull_min_y = 0;
     let cull_max_y = 160;
 
-    unsafe { *DRAW_COLORS = 0x31 }
+    set_draw_colors(0x31);
+    
     for x in -padding_tiles_x..PLAYABLE_TILES_X + padding_tiles_x {
         for y in -padding_tiles_y..PLAYABLE_TILES_Y + padding_tiles_y {
             let vec = Vec3 {
@@ -197,7 +188,8 @@ fn update() {
             };
             let pos = world_to_screen(vec);
             let playable_tile = x >= 0 && x < PLAYABLE_TILES_X && y >= 0 && y < PLAYABLE_TILES_Y;
-            unsafe { *DRAW_COLORS = if playable_tile { 0x310 } else { 0x210 } }
+            let draw_colors = if playable_tile { 0x310 } else { 0x210 };
+            set_draw_colors(draw_colors);
 
             let blit_pos_x = pos.0 + ORIGIN_X;
             let blit_pos_y = pos.1 + ORIGIN_Y + 5;
@@ -221,7 +213,7 @@ fn update() {
         }
     }
 
-    unsafe { *DRAW_COLORS = 0x3210 }
+    set_draw_colors(0x3210);
 
     // blit(
     //     &assets::HILL,
@@ -284,7 +276,7 @@ fn update() {
         );
     }
 
-    unsafe { *DRAW_COLORS = 0x4310 }
+    set_draw_colors(0x4310);
 
     blit(
         &assets::PORTAL,
@@ -295,7 +287,7 @@ fn update() {
         assets::PORTAL_FLAGS,
     );
 
-    unsafe { *DRAW_COLORS = 0x40 }
+    set_draw_colors(0x40);
 
     unsafe {
         for zombie in ZOMBIES.iter_mut() {
