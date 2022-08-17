@@ -1,11 +1,12 @@
 use crate::{
     assets,
-    color_state::{set_draw_colors, set_pallet},
+    color_state::set_pallet,
     coord::Coord,
     isometric::world_to_screen,
     maps::{is_hill, MAP_03},
     path_finding::move_along_path,
     portal::Portal,
+    positional::Positional,
     vec3::Vec3,
     wasm4::SCREEN_SIZE,
     zombie::{Zombie, ZOMBIE_SPEED},
@@ -19,26 +20,50 @@ fn draw_hill(x: f32, y: f32) {
 }
 
 pub struct Game {
-    zombies: Vec<Zombie>,
-    portal: Portal,
+    entities: Vec<Entity>,
+}
+
+enum Entity {
+    Zombie(Zombie),
+    Portal(Portal),
+}
+
+fn entity_depth(entity: &Entity) -> f32 {
+    match entity {
+        Entity::Zombie(zombie) => zombie.position().closeness(),
+        Entity::Portal(portal) => portal.position().closeness(),
+    }
+}
+
+fn draw_entity(entity: &Entity) {
+    match entity {
+        Entity::Zombie(zombie) => {
+            let pos = world_to_screen(zombie.position);
+
+            assets::ZOMBIE.draw(pos.0 + ORIGIN_X as i32 + 5, pos.1 + ORIGIN_Y - 2);
+        }
+        Entity::Portal(portal) => {
+            let draw_at = world_to_screen(portal.position);
+            assets::PORTAL.draw(draw_at.0 + ORIGIN_X as i32 + 2, draw_at.1 + ORIGIN_Y - 10);
+        }
+    }
 }
 
 impl Game {
     pub fn new() -> Self {
-        Self {
-            zombies: Vec::new(),
-            portal: Portal {
-                position: Vec3 {
-                    x: 10.5,
-                    y: 10.5,
-                    z: 0.,
-                },
+        let mut entities = Vec::new();
+        entities.push(Entity::Portal(Portal {
+            position: Vec3 {
+                x: 10.5,
+                y: 10.5,
+                z: 0.,
             },
-        }
+        }));
+        Self { entities }
     }
 
     pub fn start(&mut self) {
-        self.zombies.push(Zombie {
+        self.entities.push(Entity::Zombie(Zombie {
             position: Vec3 {
                 x: 9.5,
                 y: 10.5,
@@ -46,9 +71,7 @@ impl Game {
             },
             last: Coord(10, 10),
             target: None,
-        });
-
-        set_draw_colors(0x4321);
+        }));
 
         set_pallet([0x5a3921, 0x6b8c42, 0x7bc67b, 0xffffb5]);
     }
@@ -62,8 +85,6 @@ impl Game {
         let cull_min_y = 0;
         let cull_max_y = SCREEN_SIZE;
 
-        set_draw_colors(0x31);
-
         for x in -padding_tiles_x..PLAYABLE_TILES_X + padding_tiles_x {
             for y in -padding_tiles_y..PLAYABLE_TILES_Y + padding_tiles_y {
                 let vec = Vec3 {
@@ -75,7 +96,6 @@ impl Game {
                 let playable_tile =
                     x >= 0 && x < PLAYABLE_TILES_X && y >= 0 && y < PLAYABLE_TILES_Y;
                 let draw_colors = if playable_tile { 0x310 } else { 0x210 };
-                set_draw_colors(draw_colors);
 
                 let blit_pos_x = pos.0 + ORIGIN_X as i32;
                 let blit_pos_y = pos.1 + ORIGIN_Y + 5;
@@ -88,11 +108,9 @@ impl Game {
                     continue;
                 }
 
-                assets::TILE.draw(blit_pos_x, blit_pos_y);
+                assets::TILE.draw_with_colors(blit_pos_x, blit_pos_y, draw_colors);
             }
         }
-
-        set_draw_colors(0x3210);
 
         // blit(
         //     &assets::HILL,
@@ -112,31 +130,23 @@ impl Game {
 
         assert_eq!(MAP_03.len() as i32, PLAYABLE_TILES_Y);
 
-        // trace("Start");
-        for depth_level in 0..(PLAYABLE_TILES_X + PLAYABLE_TILES_Y - 1) {
-            // 0 = 0,0
-            // 1 = 1,0 0,1
-            // 2 = 2,0 1,1 0,2
-            // 3 = 3,0 2,1 1,2 0,3
+        let mut enitity_i: usize = 0;
 
-            // trace(format!("Start level {}", depth_level));
+        for depth_level in 0..(PLAYABLE_TILES_X + PLAYABLE_TILES_Y - 1) {
+            while enitity_i < self.entities.len()
+                && entity_depth(&self.entities[enitity_i]) < (depth_level as f32 + 0.5)
+            {
+                draw_entity(&self.entities[enitity_i]);
+                enitity_i += 1;
+                // WARN: Won't draw entities closer then nearest playable tile
+            }
             for i in 0..(depth_level + 1) {
                 let coord = Coord(i, depth_level - i);
                 if is_hill(coord.0, coord.1) {
                     draw_hill(coord.0 as f32, coord.1 as f32);
                 }
             }
-            // trace(format!("End level {}", depth_level));
         }
-        // trace("End");
-
-        // for x in 0..PLAYABLE_TILES_X {
-        //     for y in 0..PLAYABLE_TILES_Y {
-        //         if is_hill(x, y) {
-        //             draw_hill(x as f32, y as f32);
-        //         }
-        //     }
-        // }
 
         // Front towers
         {
@@ -148,25 +158,36 @@ impl Game {
             );
         }
 
-        set_draw_colors(0x4310);
+        // for entity in self.entities.iter() {
+        //     match entity {
+        //         Entity::Zombie(zombie) => {
+        //             set_draw_colors(0x40);
+        //             let pos = world_to_screen(zombie.position);
 
-        {
-            let draw_at = world_to_screen(self.portal.position);
-            assets::PORTAL.draw(draw_at.0 + ORIGIN_X as i32 + 2, draw_at.1 + ORIGIN_Y - 10);
-        }
-
-        set_draw_colors(0x40);
-
-        for zombie in self.zombies.iter() {
-            let pos = world_to_screen(zombie.position);
-
-            assets::ZOMBIE.draw(pos.0 + ORIGIN_X as i32 + 5, pos.1 + ORIGIN_Y - 2);
-        }
+        //             assets::ZOMBIE.draw(pos.0 + ORIGIN_X as i32 + 5, pos.1 + ORIGIN_Y - 2);
+        //         }
+        //         Entity::Portal(portal) => {
+        //             set_draw_colors(0x4310);
+        //             let draw_at = world_to_screen(portal.position);
+        //             assets::PORTAL.draw(draw_at.0 + ORIGIN_X as i32 + 2, draw_at.1 + ORIGIN_Y - 10);
+        //         }
+        //     }
+        // }
     }
 
     pub fn update(&mut self) {
-        for zombie in self.zombies.iter_mut() {
-            move_along_path(zombie, ZOMBIE_SPEED);
+        self.entities
+            .sort_by(|a, b| entity_depth(a).partial_cmp(&entity_depth(b)).unwrap());
+
+        for entity in self.entities.iter_mut() {
+            match entity {
+                Entity::Zombie(zombie) => {
+                    move_along_path(zombie, ZOMBIE_SPEED);
+                }
+                Entity::Portal(_) => {
+                    // Do nothing
+                }
+            };
         }
 
         self.render();
