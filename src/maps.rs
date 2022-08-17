@@ -25,6 +25,6 @@ pub const MAP_03: [u32; 21] = [
 ];
 
 pub fn is_hill(x: i32, y: i32) -> bool {
-    (MAP_03[x as usize] >> y) & 1 == 1
+    (x >= 0 && y >= 0) && (x < 21 && y < 21) && ((MAP_03[x as usize] >> y) & 1 == 1)
 }
 

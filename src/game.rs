@@ -5,22 +5,15 @@ use crate::{
     isometric::world_to_screen,
     maps::{is_hill, MAP_03},
     vec3::Vec3,
-    wasm4::{blit, SCREEN_SIZE},
+    wasm4::{blit, trace, SCREEN_SIZE},
     zombie::{Zombie, ZOMBIE_SPEED},
-    ORIGIN_X, ORIGIN_Y, PLAYABLE_TILES_X, PLAYABLE_TILES_Y,
+    ORIGIN_X, ORIGIN_Y, PLAYABLE_TILES_X, PLAYABLE_TILES_Y, portal::{Portal, self},
 };
 
 fn draw_hill(x: f32, y: f32) {
     let pos = world_to_screen(Vec3 { x, y, z: 0. });
 
-    blit(
-        &assets::HILL,
-        pos.0 + ORIGIN_X as i32,
-        pos.1 + ORIGIN_Y,
-        assets::HILL_WIDTH,
-        assets::HILL_HEIGHT,
-        assets::HILL_FLAGS,
-    );
+    assets::HILL.draw(pos.0 + ORIGIN_X as i32, pos.1 + ORIGIN_Y);
 }
 
 fn update_target(zombie: &mut Zombie) {
@@ -71,12 +64,14 @@ fn find_target_direction(curr_coord: Coord, last_coord: Coord) -> Option<Coord> 
 
 pub struct Game {
     zombies: Vec<Zombie>,
+    portal: Portal,
 }
 
 impl Game {
     pub fn new() -> Self {
         Self {
             zombies: Vec::new(),
+            portal: Portal { position: Vec3 { x: 10.5, y: 10.5, z: 0. } },
         }
     }
 
@@ -124,21 +119,14 @@ impl Game {
                 let blit_pos_y = pos.1 + ORIGIN_Y + 5;
 
                 if blit_pos_x > cull_max_x as i32
-                    || blit_pos_x < cull_min_x - (assets::TILE_WIDTH as i32)
+                    || blit_pos_x < cull_min_x - (assets::TILE.width as i32)
                     || blit_pos_y > cull_max_y as i32
-                    || blit_pos_y < cull_min_y - (assets::TILE_HEIGHT as i32)
+                    || blit_pos_y < cull_min_y - (assets::TILE.height as i32)
                 {
                     continue;
                 }
 
-                blit(
-                    &assets::TILE,
-                    blit_pos_x,
-                    blit_pos_y,
-                    assets::TILE_WIDTH,
-                    assets::TILE_HEIGHT,
-                    assets::TILE_FLAGS,
-                );
+                assets::TILE.draw(blit_pos_x, blit_pos_y);
             }
         }
 
@@ -155,80 +143,63 @@ impl Game {
 
         // Back towers
         {
-            blit(
-                &assets::TOWER,
-                4,
-                5,
-                assets::TOWER_WIDTH,
-                assets::TOWER_HEIGHT,
-                assets::TOWER_FLAGS,
-            );
+            assets::TOWER.draw(4, 5);
 
-            blit(
-                &assets::TOWER,
-                SCREEN_SIZE as i32 - 4 - assets::TOWER_WIDTH as i32,
-                5,
-                assets::TOWER_WIDTH,
-                assets::TOWER_HEIGHT,
-                assets::TOWER_FLAGS,
-            );
+            assets::TOWER.draw(SCREEN_SIZE as i32 - 4 - assets::TOWER.width as i32, 5);
         }
 
         assert_eq!(MAP_03.len() as i32, PLAYABLE_TILES_Y);
 
-        for x in 0..PLAYABLE_TILES_X {
-            for y in 0..PLAYABLE_TILES_Y {
-                if is_hill(x, y) {
-                    draw_hill(x as f32, y as f32);
+        // trace("Start");
+        for depth_level in 0..(PLAYABLE_TILES_X + PLAYABLE_TILES_Y - 1) {
+            // 0 = 0,0
+            // 1 = 1,0 0,1
+            // 2 = 2,0 1,1 0,2
+            // 3 = 3,0 2,1 1,2 0,3
+
+            // trace(format!("Start level {}", depth_level));
+            for i in 0..(depth_level+1) {
+                let coord = Coord(i, depth_level - i);
+                if is_hill(coord.0, coord.1) {
+                    draw_hill(coord.0 as f32, coord.1 as f32);
                 }
             }
+            // trace(format!("End level {}", depth_level));
         }
+        // trace("End");
+
+        // for x in 0..PLAYABLE_TILES_X {
+        //     for y in 0..PLAYABLE_TILES_Y {
+        //         if is_hill(x, y) {
+        //             draw_hill(x as f32, y as f32);
+        //         }
+        //     }
+        // }
 
         // Front towers
         {
-            blit(
-                &assets::TOWER,
-                4,
-                SCREEN_SIZE as i32 - 3 - assets::TOWER_HEIGHT as i32,
-                assets::TOWER_WIDTH,
-                assets::TOWER_HEIGHT,
-                assets::TOWER_FLAGS,
-            );
+            assets::TOWER.draw(4, SCREEN_SIZE as i32 - 3 - assets::TOWER.height as i32);
 
-            blit(
-                &assets::TOWER,
-                SCREEN_SIZE as i32 - 4 - assets::TOWER_WIDTH as i32,
-                SCREEN_SIZE as i32 - 3 - assets::TOWER_HEIGHT as i32,
-                assets::TOWER_WIDTH,
-                assets::TOWER_HEIGHT,
-                assets::TOWER_FLAGS,
+            assets::TOWER.draw(
+                SCREEN_SIZE as i32 - 4 - assets::TOWER.width as i32,
+                SCREEN_SIZE as i32 - 3 - assets::TOWER.height as i32,
             );
         }
 
         set_draw_colors(0x4310);
 
-        blit(
-            &assets::PORTAL,
-            (80 - assets::PORTAL_WIDTH / 2) as i32,
-            80,
-            assets::PORTAL_WIDTH,
-            assets::PORTAL_HEIGHT,
-            assets::PORTAL_FLAGS,
-        );
+        {
+            let draw_at = world_to_screen(self.portal.position);
+            assets::PORTAL.draw(draw_at.0 + ORIGIN_X as i32 + 2, draw_at.1 + ORIGIN_Y - 10);
+        }
+        
 
         set_draw_colors(0x40);
 
         for zombie in self.zombies.iter() {
             let pos = world_to_screen(zombie.position);
 
-            blit(
-                &assets::ZOMBIE,
-                pos.0 + ORIGIN_X as i32 + 5,
-                pos.1 + ORIGIN_Y - 2,
-                assets::ZOMBIE_WIDTH,
-                assets::ZOMBIE_HEIGHT,
-                assets::ZOMBIE_FLAGS,
-            );
+            assets::ZOMBIE.draw(pos.0 + ORIGIN_X as i32 + 5, pos.1 + ORIGIN_Y - 2);
         }
     }
 

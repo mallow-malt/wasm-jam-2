@@ -29,6 +29,10 @@ impl Vec3 {
     pub fn normalize(self) -> Vec3 {
         self / self.mag()
     }
+
+    pub fn closeness(self) -> f32 {
+        self.x + self.y + self.z
+    }
 }
 
 impl Add for Vec3 {

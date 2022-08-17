@@ -9,6 +9,8 @@ mod color_state;
 mod maps;
 mod isometric;
 mod vec3;
+mod sprite;
+mod portal;
 
 use game::Game;
 use lazy_static::lazy_static;
@@ -25,7 +27,7 @@ fn start() {
 }
 
 const ORIGIN_X: u32 = SCREEN_SIZE / 2;
-const ORIGIN_Y: i32 = assets::TILE_HEIGHT as i32;
+const ORIGIN_Y: i32 = isometric::TILE_HEIGHT as i32;
 const PLAYABLE_TILES_X: i32 = 21;
 const PLAYABLE_TILES_Y: i32 = 21;
 
