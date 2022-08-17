@@ -5,7 +5,11 @@ pub struct Portal {
 }
 
 impl Positional for Portal {
-    fn get_position(&self) -> Vec3 {
+    fn position(&self) -> Vec3 {
         self.position
+    }
+
+    fn set_position(&mut self, value: Vec3) {
+        self.position = value
     }
 }

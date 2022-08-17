@@ -4,62 +4,18 @@ use crate::{
     coord::Coord,
     isometric::world_to_screen,
     maps::{is_hill, MAP_03},
+    path_finding::move_along_path,
+    portal::Portal,
     vec3::Vec3,
-    wasm4::{blit, trace, SCREEN_SIZE},
+    wasm4::SCREEN_SIZE,
     zombie::{Zombie, ZOMBIE_SPEED},
-    ORIGIN_X, ORIGIN_Y, PLAYABLE_TILES_X, PLAYABLE_TILES_Y, portal::{Portal, self}, positional::Positional,
+    ORIGIN_X, ORIGIN_Y, PLAYABLE_TILES_X, PLAYABLE_TILES_Y,
 };
 
 fn draw_hill(x: f32, y: f32) {
     let pos = world_to_screen(Vec3 { x, y, z: 0. });
 
     assets::HILL.draw(pos.0 + ORIGIN_X as i32, pos.1 + ORIGIN_Y);
-}
-
-fn update_target(zombie: &mut Zombie) {
-    let start_coord = zombie.curr_coord();
-    match find_target_direction(start_coord, zombie.last) {
-        Some(dir) => {
-            zombie.target = Some(Vec3::from_coord(dir + start_coord));
-            zombie.last = start_coord;
-        }
-        None => {
-            zombie.target = None;
-        }
-    };
-}
-
-const DIRECTIONS: [Coord; 4] = [Coord(-1, 0), Coord(1, 0), Coord(0, -1), Coord(0, 1)];
-
-/// Return a cardinal unit coordinate which represents the first
-/// nearby tile which is not a hill and not last_coord
-fn find_target_direction(curr_coord: Coord, last_coord: Coord) -> Option<Coord> {
-    // trace(format!("At tile {:?}", curr_coord));
-    for offset in DIRECTIONS {
-        let targ = curr_coord + offset;
-
-        // trace(format!(
-        //     "Looking at tile {:?}, is_hill {}, is_last_coord {}, offset {:?}, is_hill(0, 0) {}",
-        //     targ,
-        //     is_hill(targ.0, targ.1),
-        //     targ == last_coord,
-        //     offset,
-        //     is_hill(0, 0)
-        // ));
-
-        if targ.0 >= 0
-            && targ.1 >= 0
-            && targ.0 < PLAYABLE_TILES_X
-            && targ.1 < PLAYABLE_TILES_Y
-            && !is_hill(targ.0, targ.1)
-            && targ != last_coord
-        {
-            // trace("Returned offset");
-            return Some(offset);
-        }
-    }
-
-    None
 }
 
 pub struct Game {
@@ -71,7 +27,13 @@ impl Game {
     pub fn new() -> Self {
         Self {
             zombies: Vec::new(),
-            portal: Portal { position: Vec3 { x: 10.5, y: 10.5, z: 0. } },
+            portal: Portal {
+                position: Vec3 {
+                    x: 10.5,
+                    y: 10.5,
+                    z: 0.,
+                },
+            },
         }
     }
 
@@ -158,7 +120,7 @@ impl Game {
             // 3 = 3,0 2,1 1,2 0,3
 
             // trace(format!("Start level {}", depth_level));
-            for i in 0..(depth_level+1) {
+            for i in 0..(depth_level + 1) {
                 let coord = Coord(i, depth_level - i);
                 if is_hill(coord.0, coord.1) {
                     draw_hill(coord.0 as f32, coord.1 as f32);
@@ -192,7 +154,6 @@ impl Game {
             let draw_at = world_to_screen(self.portal.position);
             assets::PORTAL.draw(draw_at.0 + ORIGIN_X as i32 + 2, draw_at.1 + ORIGIN_Y - 10);
         }
-        
 
         set_draw_colors(0x40);
 
@@ -205,32 +166,7 @@ impl Game {
 
     pub fn update(&mut self) {
         for zombie in self.zombies.iter_mut() {
-            let mut distance_to_consume = ZOMBIE_SPEED;
-            loop {
-                match zombie.target {
-                    Some(targ) => {
-                        let to_target = targ - zombie.position;
-                        let distance_to_target = to_target.mag();
-                        if distance_to_target <= distance_to_consume {
-                            distance_to_consume -= distance_to_target;
-                            zombie.position = targ;
-                            update_target(zombie);
-                            if zombie.target.is_none() {
-                                break;
-                            }
-                        } else {
-                            zombie.position += to_target.normalize() * distance_to_consume;
-                            break;
-                        }
-                    }
-                    None => {
-                        update_target(zombie);
-                        if zombie.target.is_none() {
-                            break;
-                        }
-                    }
-                }
-            }
+            move_along_path(zombie, ZOMBIE_SPEED);
         }
 
         self.render();
