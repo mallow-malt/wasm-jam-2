@@ -23,8 +23,23 @@ fn draw_hill(x: f32, y: f32) {
     );
 }
 
+fn update_target(zombie: &mut Zombie) {
+    let start_coord = zombie.curr_coord();
+    match find_target_direction(start_coord, zombie.last) {
+        Some(dir) => {
+            zombie.target = Some(Vec3::from_coord(dir + start_coord));
+            zombie.last = start_coord;
+        }
+        None => {
+            zombie.target = None;
+        }
+    };
+}
+
 const DIRECTIONS: [Coord; 4] = [Coord(-1, 0), Coord(1, 0), Coord(0, -1), Coord(0, 1)];
 
+/// Return a cardinal unit coordinate which represents the first
+/// nearby tile which is not a hill and not last_coord
 fn find_target_direction(curr_coord: Coord, last_coord: Coord) -> Option<Coord> {
     // trace(format!("At tile {:?}", curr_coord));
     for offset in DIRECTIONS {
@@ -67,9 +82,13 @@ impl Game {
 
     pub fn start(&mut self) {
         self.zombies.push(Zombie {
-            curr_x: 9.5,
-            curr_y: 10.5,
+            position: Vec3 {
+                x: 9.5,
+                y: 10.5,
+                z: 0.,
+            },
             last: Coord(10, 10),
+            target: None,
         });
 
         set_draw_colors(0x4321);
@@ -200,11 +219,7 @@ impl Game {
         set_draw_colors(0x40);
 
         for zombie in self.zombies.iter() {
-            let pos = world_to_screen(Vec3 {
-                x: zombie.curr_x,
-                y: zombie.curr_y,
-                z: 0.,
-            });
+            let pos = world_to_screen(zombie.position);
 
             blit(
                 &assets::ZOMBIE,
@@ -219,28 +234,30 @@ impl Game {
 
     pub fn update(&mut self) {
         for zombie in self.zombies.iter_mut() {
-            // trace(format!("zombie {},{}", zombie.curr_x, zombie.curr_y));
-
-            // trace(format!("zombie coord {:?}", zombie.curr_coord()));
-            let start_coord = zombie.curr_coord();
-
-            match find_target_direction(start_coord, zombie.last) {
-                Some(targ) => {
-                    // trace(format!("Found tile to move to at {:?}", targ));
-
-                    let motion_x = targ.0 as f32 * ZOMBIE_SPEED;
-                    let motion_y = targ.1 as f32 * ZOMBIE_SPEED;
-                    zombie.curr_x += motion_x;
-                    zombie.curr_y += motion_y;
-
-                    if zombie.curr_coord() != start_coord {
-                        zombie.last = start_coord
+            let mut distance_to_consume = ZOMBIE_SPEED;
+            loop {
+                match zombie.target {
+                    Some(targ) => {
+                        let to_target = targ - zombie.position;
+                        let distance_to_target = to_target.mag();
+                        if distance_to_target <= distance_to_consume {
+                            distance_to_consume -= distance_to_target;
+                            zombie.position = targ;
+                            update_target(zombie);
+                            if zombie.target.is_none() {
+                                break;
+                            }
+                        } else {
+                            zombie.position += to_target.normalize() * distance_to_consume;
+                            break;
+                        }
                     }
-                }
-                None => {
-                    // Do nothing
-                    //  Can't fild tile to move to
-                    // trace("Can't find tile to move to");
+                    None => {
+                        update_target(zombie);
+                        if zombie.target.is_none() {
+                            break;
+                        }
+                    }
                 }
             }
         }
