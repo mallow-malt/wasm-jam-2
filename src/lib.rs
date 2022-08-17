@@ -11,6 +11,7 @@ mod isometric;
 mod vec3;
 mod sprite;
 mod portal;
+mod positional;
 
 use game::Game;
 use lazy_static::lazy_static;

@@ -7,7 +7,7 @@ use crate::{
     vec3::Vec3,
     wasm4::{blit, trace, SCREEN_SIZE},
     zombie::{Zombie, ZOMBIE_SPEED},
-    ORIGIN_X, ORIGIN_Y, PLAYABLE_TILES_X, PLAYABLE_TILES_Y, portal::{Portal, self},
+    ORIGIN_X, ORIGIN_Y, PLAYABLE_TILES_X, PLAYABLE_TILES_Y, portal::{Portal, self}, positional::Positional,
 };
 
 fn draw_hill(x: f32, y: f32) {

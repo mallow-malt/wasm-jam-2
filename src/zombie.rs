@@ -1,4 +1,4 @@
-use crate::{coord::Coord, vec3::Vec3};
+use crate::{coord::Coord, vec3::Vec3, positional::Positional};
 
 pub const ZOMBIE_SPEED: f32 = 0.005;
 
@@ -14,3 +14,8 @@ impl Zombie {
     }
 }
 
+impl Positional for Zombie {
+    fn get_position(&self) -> Vec3 {
+        self.position
+    }
+}
