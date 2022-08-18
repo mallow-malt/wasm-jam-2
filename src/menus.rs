@@ -1,25 +1,22 @@
-use crate::*;
+use crate::{game::{Game, GameState}, wasm4::{text, NETPLAY}, gamepad::Button};
 
-pub unsafe fn main_menu() {
+pub fn main_menu(game: &mut Game) {
     text("Game Title", 40,10);
     text("Press X to Start", 20,50);
-    if pressed_this_frame(0) & BUTTON_1 != 0 {
-        GAME_STATE = 1;
+    if game.gamepad.pressed_this_frame(0, Button::Button1) {
+        game.state = GameState::JoinMenu
     }
 }
 
-pub unsafe fn join_menu() {
-    if *NETPLAY & 0b100 == 0b100 { // If netplay is active
-        let player_index = *NETPLAY & 0b011;
-        match player_index {
-            0 => host_screen(),
-            _ => join_screen(player_index)
-        }
+pub fn join_menu(game: &mut Game) {
+    if unsafe { *NETPLAY & 0b100 == 0b100 } { // If netplay is active
+        let player_index = unsafe { *NETPLAY & 0b011 };
+        render_screen(game, player_index);
         // Enable start game for host if at least one other active player
-        if ACTIVE_PLAYERS.iter().skip(1).any(|x| *x) && pressed_this_frame(0) & BUTTON_1 != 0 {
-            GAME_STATE = 2;
+        if game.active_players.iter().skip(1).any(|x| *x) && game.gamepad.pressed_this_frame(0, Button::Button1) {
+            game.state = GameState::GameStart
         }
-        run_for_non_host(&check_join_inputs)
+        game.run(&check_join_inputs, false, false);
     } else {
         text("Use return to",0,0);
         text("activate Netplay and ",0,10);
@@ -28,30 +25,29 @@ pub unsafe fn join_menu() {
     }
 }
 
-unsafe fn host_screen() {
-    print_player_status(1);
-    print_player_status(2);
-    print_player_status(3);
-    if ACTIVE_PLAYERS.iter().skip(1).any(|x| *x) {
-        text("Press X to start.", 0, 40);
-    }
-}
+fn render_screen(game: &mut Game, player_index: u8) {
+    if player_index == 0 {
+        game.run(&print_player_status, false, false);
 
-unsafe fn print_player_status(player_index: u8) {
-    text(format!("Player {}", player_index + 1) + if ACTIVE_PLAYERS[player_index as usize] {" Active"} else {" Inactive"}, 0, i32::from((player_index - 1) * 10));
-}
-
-unsafe fn join_screen(player_index: u8) {
-    text("You are ".to_owned() + &format!("Player {}", player_index + 1), 0,0);
-    if ACTIVE_PLAYERS[player_index as usize] {
-        text("Waiting for host", 0, 10);
+        if game.active_players.iter().skip(1).any(|x| *x) {
+            text("Press X to start.", 0, 40);
+        }
     } else {
-        text("Press X to ready up", 0, 10);
+        text("You are ".to_owned() + &format!("Player {}", player_index + 1), 0,0);
+        if game.active_players[player_index as usize] {
+            text("Waiting for host", 0, 10);
+        } else {
+            text("Press X to ready up", 0, 10);
+        }
     }
 }
 
-fn check_join_inputs(player_index: u8) {
-    unsafe {if pressed_this_frame(player_index) & BUTTON_1 != 0 {
-        ACTIVE_PLAYERS[player_index as usize] = true
-    }}
+fn check_join_inputs(game: &mut Game, player_index: u8) {
+    if game.gamepad.pressed_this_frame(player_index, Button::Button1) {
+        game.active_players[player_index as usize] = true
+    }
+}
+
+fn print_player_status(game: &mut Game, player_index: u8) {
+    text(format!("Player {}", player_index + 1) + if game.active_players[player_index as usize] {" Active"} else {" Inactive"}, 0, i32::from((player_index - 1) * 10));
 }

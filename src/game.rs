@@ -10,7 +10,7 @@ use crate::{
     vec3::Vec3,
     wasm4::SCREEN_SIZE,
     zombie::{Zombie, ZOMBIE_SPEED},
-    ORIGIN_X, ORIGIN_Y, PLAYABLE_TILES_X, PLAYABLE_TILES_Y, arror_tower::ArrowTower,
+    ORIGIN_X, ORIGIN_Y, PLAYABLE_TILES_X, PLAYABLE_TILES_Y, arror_tower::ArrowTower, gamepad::Gamepad, menus::{main_menu, join_menu},
 };
 
 fn draw_hill(x: f32, y: f32) {
@@ -21,6 +21,15 @@ fn draw_hill(x: f32, y: f32) {
 
 pub struct Game {
     entities: Vec<Entity>,
+    pub gamepad: Gamepad,
+    pub state: GameState,
+    pub active_players: [bool; 4]
+}
+
+pub enum GameState {
+    MainMenu,
+    JoinMenu,
+    GameStart,
 }
 
 enum Entity {
@@ -66,7 +75,12 @@ impl Game {
                 z: 0.,
             },
         }));
-        Self { entities }
+        Self { 
+            entities, 
+            gamepad: Gamepad::new(), 
+            state: GameState::MainMenu,
+            active_players: [true, false, false, false]
+        }
     }
 
     pub fn start(&mut self) {
@@ -218,6 +232,16 @@ impl Game {
     }
 
     pub fn update(&mut self) {
+        self.gamepad.update_state();
+
+        match self.state {
+            GameState::MainMenu => main_menu(self),
+            GameState::JoinMenu => join_menu(self),
+            GameState::GameStart => self.game_start(),
+        }
+    }
+
+    fn game_start(&mut self) {
         self.entities
             .sort_by(|a, b| entity_depth(a).partial_cmp(&entity_depth(b)).unwrap());
 
@@ -236,5 +260,16 @@ impl Game {
         }
 
         self.render();
+    }
+
+    pub fn run<F>(&mut self, mut fun: F, only_active: bool, include_host: bool) 
+        where F: FnMut(&mut Self, u8)
+    {
+        for i in 0..self.active_players.len() {
+            if (!only_active || self.active_players[i as usize])
+                && (include_host || i != 0) {
+                fun(self, i as u8);
+            }
+        }
     }
 }
