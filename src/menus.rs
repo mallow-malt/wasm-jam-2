@@ -15,7 +15,11 @@ pub unsafe fn join_menu() {
             0 => host_screen(),
             _ => join_screen(player_index)
         }
-        check_join_inputs();
+        // Enable start game for host if at least one other active player
+        if ACTIVE_PLAYERS.iter().skip(1).any(|x| *x) && pressed_this_frame(0) & BUTTON_1 != 0 {
+            GAME_STATE = 2;
+        }
+        run_for_non_host(&check_join_inputs)
     } else {
         text("Use return to",0,0);
         text("activate Netplay and ",0,10);
@@ -46,17 +50,8 @@ unsafe fn join_screen(player_index: u8) {
     }
 }
 
-unsafe fn check_join_inputs() {
-    if ACTIVE_PLAYERS.iter().skip(1).any(|x| *x) && pressed_this_frame(0) & BUTTON_1 != 0 {
-        GAME_STATE = 2;
-    }
-    if pressed_this_frame(1) & BUTTON_1 != 0 {
-        ACTIVE_PLAYERS[1] = true
-    }
-    if pressed_this_frame(2) & BUTTON_1 != 0 {
-        ACTIVE_PLAYERS[2] = true
-    }
-    if pressed_this_frame(3) & BUTTON_1 != 0 {
-        ACTIVE_PLAYERS[3] = true
-    }
+fn check_join_inputs(player_index: u8) {
+    unsafe {if pressed_this_frame(player_index) & BUTTON_1 != 0 {
+        ACTIVE_PLAYERS[player_index as usize] = true
+    }}
 }
