@@ -1,36 +1,42 @@
 #[cfg(feature = "buddy-alloc")]
 mod alloc;
+mod assets;
 mod wasm4;
-mod gamepad;
-mod menus;
-mod state;
-use wasm4::*;
-use gamepad::*;
-use menus::*;
-use state::*;
+mod game;
+mod zombie;
+mod coord;
+mod color_state;
+mod maps;
+mod isometric;
+mod vec3;
+mod sprite;
+mod portal;
+mod positional;
+mod path_finding;
+mod arror_tower;
+
+use game::Game;
+use lazy_static::lazy_static;
+use wasm4::SCREEN_SIZE;
+use std::sync::Mutex;
+
+lazy_static! {
+    static ref GAME: Mutex<Game> = Mutex::new(Game::new());
+}
 
 #[no_mangle]
 fn start() {
-    unsafe { *DRAW_COLORS = 0x4321 }
-
-    unsafe {
-        *PALETTE = [
-            0x000000,
-            0x32cd32,
-            0x8b0000,
-            0xadd8e6,
-        ];
-    }
+    GAME.lock().expect("game_state").start();
 }
+
+const ORIGIN_X: u32 = SCREEN_SIZE / 2;
+const ORIGIN_Y: i32 = isometric::TILE_HEIGHT as i32;
+const PLAYABLE_TILES_X: i32 = 21;
+const PLAYABLE_TILES_Y: i32 = 21;
 
 #[no_mangle]
-unsafe fn update() {
-    gamepad_update();
-
-    match GAME_STATE {
-        0 => main_menu(),
-        1 => join_menu(),
-        2 => text("Game Started", 0, 0),
-        _ => panic!()
-    }
+fn update() {
+    GAME.lock().expect("game_state").update();
 }
+
+
