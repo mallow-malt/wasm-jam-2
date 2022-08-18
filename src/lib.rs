@@ -38,3 +38,4 @@ const PLAYABLE_TILES_Y: i32 = 21;
 fn update() {
     GAME.lock().expect("game_state").update();
 }
+
