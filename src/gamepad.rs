@@ -1,16 +1,16 @@
 use crate::*;
 
-pub static mut PLAYER01_PREVIOUS_GAMEPAD: u8 = 0;
-pub static mut PLAYER01_PRESSED_THIS_FRAME: u8 = 0;
+static mut PLAYER01_PREVIOUS_GAMEPAD: u8 = 0;
+static mut PLAYER01_PRESSED_THIS_FRAME: u8 = 0;
 
-pub static mut PLAYER02_PREVIOUS_GAMEPAD: u8 = 0;
-pub static mut PLAYER02_PRESSED_THIS_FRAME: u8 = 0;
+static mut PLAYER02_PREVIOUS_GAMEPAD: u8 = 0;
+static mut PLAYER02_PRESSED_THIS_FRAME: u8 = 0;
 
-pub static mut PLAYER03_PREVIOUS_GAMEPAD: u8 = 0;
-pub static mut PLAYER03_PRESSED_THIS_FRAME: u8 = 0;
+static mut PLAYER03_PREVIOUS_GAMEPAD: u8 = 0;
+static mut PLAYER03_PRESSED_THIS_FRAME: u8 = 0;
 
-pub static mut PLAYER04_PREVIOUS_GAMEPAD: u8 = 0;
-pub static mut PLAYER04_PRESSED_THIS_FRAME: u8 = 0;
+static mut PLAYER04_PREVIOUS_GAMEPAD: u8 = 0;
+static mut PLAYER04_PRESSED_THIS_FRAME: u8 = 0;
 
 pub unsafe fn gamepad_update()
 {
@@ -25,4 +25,24 @@ pub unsafe fn gamepad_update()
 
     PLAYER04_PRESSED_THIS_FRAME = *GAMEPAD4 & (*GAMEPAD4 ^ PLAYER04_PREVIOUS_GAMEPAD);
     PLAYER04_PREVIOUS_GAMEPAD = *GAMEPAD4;
+}
+
+pub unsafe fn gamepad(player_index: u8) -> u8 {
+    match player_index {
+        0 => PLAYER01_PREVIOUS_GAMEPAD,
+        1 => PLAYER02_PREVIOUS_GAMEPAD,
+        2 => PLAYER03_PREVIOUS_GAMEPAD,
+        3 => PLAYER04_PREVIOUS_GAMEPAD,
+        _ => panic!()
+    }
+}
+
+pub unsafe fn pressed_this_frame(player_index: u8) -> u8 {
+    match player_index {
+        0 => PLAYER01_PRESSED_THIS_FRAME,
+        1 => PLAYER02_PRESSED_THIS_FRAME,
+        2 => PLAYER03_PRESSED_THIS_FRAME,
+        3 => PLAYER04_PRESSED_THIS_FRAME,
+        _ => panic!()
+    }
 }

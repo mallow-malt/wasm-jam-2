@@ -2,8 +2,12 @@
 mod alloc;
 mod wasm4;
 mod gamepad;
+mod menus;
+mod state;
 use wasm4::*;
 use gamepad::*;
+use menus::*;
+use state::*;
 
 #[no_mangle]
 fn start() {
@@ -23,27 +27,10 @@ fn start() {
 unsafe fn update() {
     gamepad_update();
 
-    if PLAYER01_PREVIOUS_GAMEPAD & BUTTON_1 != 0 {
-        text("P01 pressing x", 0, 10)
-    } else {
-        text("P01 not pressing x", 0, 10)
-    }
-
-    if PLAYER02_PREVIOUS_GAMEPAD & BUTTON_1 != 0 {
-        text("P02 pressing x", 0, 20)
-    } else {
-        text("P02 not pressing x", 0, 20)
-    }
-
-    if PLAYER03_PREVIOUS_GAMEPAD & BUTTON_1 != 0 {
-        text("P03 pressing x", 0, 30)
-    } else {
-        text("P03 not pressing x", 0, 30)
-    }
-
-    if PLAYER04_PREVIOUS_GAMEPAD & BUTTON_1 != 0 {
-        text("P04 pressing x", 0, 40)
-    } else {
-        text("P04 not pressing x", 0, 40)
+    match GAME_STATE {
+        0 => main_menu(),
+        1 => join_menu(),
+        2 => text("Game Started", 0, 0),
+        _ => panic!()
     }
 }
