@@ -10,7 +10,7 @@ use crate::{
     vec3::Vec3,
     wasm4::SCREEN_SIZE,
     zombie::{Zombie, ZOMBIE_SPEED},
-    ORIGIN_X, ORIGIN_Y, PLAYABLE_TILES_X, PLAYABLE_TILES_Y,
+    ORIGIN_X, ORIGIN_Y, PLAYABLE_TILES_X, PLAYABLE_TILES_Y, arror_tower::ArrowTower,
 };
 
 fn draw_hill(x: f32, y: f32) {
@@ -26,12 +26,14 @@ pub struct Game {
 enum Entity {
     Zombie(Zombie),
     Portal(Portal),
+    ArrowTower(ArrowTower),
 }
 
 fn entity_depth(entity: &Entity) -> f32 {
     match entity {
         Entity::Zombie(zombie) => zombie.position().closeness(),
         Entity::Portal(portal) => portal.position().closeness(),
+        Entity::ArrowTower(arror_tower) => arror_tower.position().closeness(),
     }
 }
 
@@ -45,6 +47,11 @@ fn draw_entity(entity: &Entity) {
         Entity::Portal(portal) => {
             let draw_at = world_to_screen(portal.position);
             assets::PORTAL.draw(draw_at.0 + ORIGIN_X as i32 + 2, draw_at.1 + ORIGIN_Y - 10);
+        }
+        Entity::ArrowTower(arrow_tower) => {
+            let pos = world_to_screen(arrow_tower.position);
+
+            assets::ARROW_TOWER.draw(pos.0 + ORIGIN_X as i32 + 4, pos.1 + ORIGIN_Y - 1);
         }
     }
 }
@@ -71,6 +78,41 @@ impl Game {
             },
             last: Coord(10, 10),
             target: None,
+        }));
+        self.entities.push(Entity::Zombie(Zombie {
+            position: Vec3 {
+                x: 11.5,
+                y: 10.5,
+                z: 0.,
+            },
+            last: Coord(10, 10),
+            target: None,
+        }));
+        self.entities.push(Entity::Zombie(Zombie {
+            position: Vec3 {
+                x: 10.5,
+                y: 9.5,
+                z: 0.,
+            },
+            last: Coord(10, 10),
+            target: None,
+        }));
+        self.entities.push(Entity::Zombie(Zombie {
+            position: Vec3 {
+                x: 10.5,
+                y: 11.5,
+                z: 0.,
+            },
+            last: Coord(10, 10),
+            target: None,
+        }));
+
+        self.entities.push(Entity::ArrowTower(ArrowTower {
+            position: Vec3 {
+                x: 5.5,
+                y: 4.5,
+                z: 0.5,
+            }
         }));
 
         set_pallet([0x5a3921, 0x6b8c42, 0x7bc67b, 0xffffb5]);
@@ -185,6 +227,9 @@ impl Game {
                     move_along_path(zombie, ZOMBIE_SPEED);
                 }
                 Entity::Portal(_) => {
+                    // Do nothing
+                }
+                Entity::ArrowTower(_) => {
                     // Do nothing
                 }
             };

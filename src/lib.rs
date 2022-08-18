@@ -13,6 +13,7 @@ mod sprite;
 mod portal;
 mod positional;
 mod path_finding;
+mod arror_tower;
 
 use game::Game;
 use lazy_static::lazy_static;
