@@ -137,7 +137,7 @@ impl Game {
                 let pos = world_to_screen(vec);
                 let playable_tile =
                     x >= 0 && x < PLAYABLE_TILES_X && y >= 0 && y < PLAYABLE_TILES_Y;
-                let draw_colors = if playable_tile { 0x310 } else { 0x210 };
+                let draw_colors = if playable_tile { 0x320 } else { 0x210 };
 
                 let blit_pos_x = pos.0 + ORIGIN_X as i32;
                 let blit_pos_y = pos.1 + ORIGIN_Y + 5;
