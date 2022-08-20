@@ -16,6 +16,8 @@ mod path_finding;
 mod arror_tower;
 mod gamepad;
 mod menus;
+mod planning;
+mod player;
 
 use game::Game;
 use lazy_static::lazy_static;

@@ -10,7 +10,7 @@ use crate::{
     vec3::Vec3,
     wasm4::SCREEN_SIZE,
     zombie::{Zombie, ZOMBIE_SPEED},
-    ORIGIN_X, ORIGIN_Y, PLAYABLE_TILES_X, PLAYABLE_TILES_Y, arror_tower::ArrowTower, gamepad::Gamepad, menus::{main_menu, join_menu},
+    ORIGIN_X, ORIGIN_Y, PLAYABLE_TILES_X, PLAYABLE_TILES_Y, arror_tower::ArrowTower, gamepad::Gamepad, menus::{main_menu, join_menu}, planning::planning, player::Player,
 };
 
 fn draw_hill(x: f32, y: f32) {
@@ -23,13 +23,16 @@ pub struct Game {
     entities: Vec<Entity>,
     pub gamepad: Gamepad,
     pub state: GameState,
-    pub active_players: [bool; 4]
+    pub active_players: [bool; 4],
+    pub player_idx: u8,
+    pub players: [Player; 4],
 }
 
 pub enum GameState {
     MainMenu,
     JoinMenu,
     GameStart,
+    Debug,
 }
 
 enum Entity {
@@ -79,7 +82,9 @@ impl Game {
             entities, 
             gamepad: Gamepad::new(), 
             state: GameState::MainMenu,
-            active_players: [true, false, false, false]
+            active_players: [true, false, false, false],
+            player_idx: 0,
+            players: [Player::new(), Player::new(), Player::new(), Player::new()]
         }
     }
 
@@ -238,6 +243,7 @@ impl Game {
             GameState::MainMenu => main_menu(self),
             GameState::JoinMenu => join_menu(self),
             GameState::GameStart => self.game_start(),
+            GameState::Debug => planning(self),
         }
     }
 

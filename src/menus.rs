@@ -13,8 +13,9 @@ pub fn join_menu(game: &mut Game) {
         let player_index = unsafe { *NETPLAY & 0b011 };
         render_screen(game, player_index);
         // Enable start game for host if at least one other active player
+        game.player_idx = player_index;
         if game.active_players.iter().skip(1).any(|x| *x) && game.gamepad.pressed_this_frame(0, Button::Button1) {
-            game.state = GameState::GameStart
+            game.state = GameState::Debug
         }
         game.run(&check_join_inputs, false, false);
     } else {
